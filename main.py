@@ -11,13 +11,13 @@ class DocumentScanner:
     def __init__(self, img_paths, interactive=False):
         self.img_path = img_paths
         self.interactive = interactive
-        self.rescaled_height = 500
+        self.rescaled_height = 600
         self.min_quad_area_ratio = 0.1
 
     def resize_image(self, img):
         h, w = img.shape[:2]
         ratio = h/self.rescaled_height
-        dim = (int(w/ratio), 500)            # tuple(width, height)
+        dim = (int(w/ratio), self.rescaled_height)            # tuple(width, height)
         img = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
         return img
 
@@ -117,7 +117,6 @@ class DocumentScanner:
                     # shape of quad : [[[1,2]], [[3,4]], [[4,5]], [[6,7]]]
                     approx_contours.append(quad)
                     break
-            print("app_con", approx_contours)
             # shape of approx contour is list of np.array([[[1,2]], [[3,4]], [[4,5]], [[6,7]]])
             if len(approx_contours) != 0:
                 image = resized_image.copy()
@@ -149,7 +148,7 @@ class DocumentScanner:
             best_contour = np.array([[top_right], [bottom_right], [bottom_left], [top_left]])
         else:
             best_contour = min(approx_contours, key=cv2.contourArea)
-        print(best_contour.shape)
+        # print(best_contour.shape) (4, 1, 2)
         return best_contour.reshape(4, 2)
 
     def scan(self):
@@ -157,12 +156,12 @@ class DocumentScanner:
             img = cv2.imread(path)
             assert (img is not None)
             # print(img.shape)
-            cv2.imshow("image", img)
-            cv2.waitKey(0)
-            cv2.destroyWindow('image')
             ratio = img.shape[0] / self.rescaled_height
             original_img = img.copy()
             resized_img = self.resize_image(img)
+            cv2.imshow("image", resized_img)
+            cv2.waitKey(0)
+            cv2.destroyWindow('image')
 
             # get the contour of the document
             contour = self.get_contour(resized_img)
@@ -172,7 +171,8 @@ class DocumentScanner:
             #     contour = self.interactive_get_contour(contour, resized_img)
 
             transformed = get_transform(contour * ratio, original_img)  # helpers_methods.py
-            cv2.imshow("trans", transformed)
+            transformed2 = self.resize_image(transformed)
+            cv2.imshow("trans", transformed2)
             cv2.waitKey(0)
             cv2.destroyWindow('trans')
 
@@ -185,7 +185,8 @@ class DocumentScanner:
 
             # apply adaptive threshold to get black and white effect
             thresh = cv2.adaptiveThreshold(sharpen, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 15)
-            cv2.imshow("transformed", thresh)
+            thresh2 = self.resize_image(thresh)
+            cv2.imshow("transformed", thresh2)
             cv2.waitKey(0)
             cv2.destroyWindow('transformed')
             print("done scanning for img: ", path)
